@@ -1,0 +1,124 @@
+---
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>FirmaGob hash signing example</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: #f5f7fb;
+        color: #172033;
+      }
+
+      body {
+        margin: 0;
+      }
+
+      main {
+        width: min(860px, calc(100vw - 32px));
+        margin: 48px auto;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 1.05;
+      }
+
+      p {
+        color: #516070;
+        line-height: 1.6;
+      }
+
+      form {
+        display: grid;
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      label {
+        font-weight: 700;
+      }
+
+      textarea {
+        min-height: 140px;
+        resize: vertical;
+        border: 1px solid #ccd5e1;
+        border-radius: 8px;
+        padding: 12px;
+        font: 14px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+
+      button {
+        justify-self: start;
+        border: 0;
+        border-radius: 8px;
+        padding: 11px 16px;
+        background: #123a73;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      pre {
+        min-height: 180px;
+        overflow: auto;
+        border: 1px solid #d6dde8;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 16px;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>FirmaGob hash signing</h1>
+      <p>
+        Ejemplo Astro que envia un hash SHA-256 base64 a una API route y llama
+        a FirmaGob usando <code>@ltorresu82/firmagob-client</code>.
+      </p>
+
+      <form id="sign-form">
+        <label for="hash">Hash SHA-256 base64</label>
+        <textarea id="hash" name="hash" placeholder="Pegar hash preparado"></textarea>
+        <button type="submit">Firmar hash</button>
+      </form>
+
+      <h2>Respuesta</h2>
+      <pre id="output">Sin respuesta.</pre>
+    </main>
+
+    <script>
+      const form = document.querySelector("#sign-form");
+      const output = document.querySelector("#output");
+
+      form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!(form instanceof HTMLFormElement) || !output) {
+          return;
+        }
+        output.textContent = "Enviando...";
+        const hash = new FormData(form).get("hash");
+        const response = await fetch("/api/sign-hash", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ hash }),
+        });
+        const text = await response.text();
+        output.textContent = text;
+      });
+    </script>
+  </body>
+</html>
