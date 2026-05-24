@@ -2,7 +2,7 @@
 
 Ejemplos publicos para integrar [`@ltorresu82/firmagob-client`](https://www.npmjs.com/package/@ltorresu82/firmagob-client) en proyectos Node.js, Hono y Astro.
 
-Este repositorio no es oficial de Gobierno Digital y no incluye credenciales. Los ejemplos se basan en fuentes oficiales publicas de FirmaGob y en el paquete npm publicado.
+Este repositorio es un monorepo Turborepo con npm workspaces. No es oficial de Gobierno Digital y no incluye credenciales. Los ejemplos se basan en fuentes oficiales publicas de FirmaGob y en el paquete npm publicado.
 
 ## Ejemplos
 

@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "astro build",
+    "check": "astro build",
     "dev": "astro dev --host 127.0.0.1 --port 4321",
     "typecheck": "astro build"
   },
   "dependencies": {
     "@astrojs/node": "^10.1.1",
-    "@ltorresu82/firmagob-client": "^0.1.1",
+    "@ltorresu82/firmagob-client": "^0.1.2",
     "astro": "^6.3.7"
   },
   "devDependencies": {

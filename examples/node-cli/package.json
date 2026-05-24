@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "check": "npm run typecheck",
     "dev": "tsx src/sign-hash.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ltorresu82/firmagob-client": "^0.1.1"
+    "@ltorresu82/firmagob-client": "^0.1.2"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",

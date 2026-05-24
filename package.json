@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "npm@10.9.7",
   "workspaces": [
     "examples/*"
   ],
   "scripts": {
-    "check": "npm run typecheck --workspaces --if-present && npm run build --workspaces --if-present",
+    "build": "turbo run build",
+    "check": "turbo run check",
+    "typecheck": "turbo run typecheck",
     "node-cli": "npm --workspace @examples/node-cli run dev --",
     "hono-api": "npm --workspace @examples/hono-api run dev",
     "astro-upload": "npm --workspace @examples/astro-upload run dev"
@@ -16,6 +19,7 @@
     "node": ">=22.12.0"
   },
   "devDependencies": {
+    "turbo": "^2.5.8",
     "typescript": "^5.4.5"
   }
 }
