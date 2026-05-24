@@ -20,6 +20,6 @@ Este repositorio es publico y debe mantenerse generico.
 Antes de publicar cambios ejecutar:
 
 ```bash
-npm ci
-npm run check
+pnpm install --frozen-lockfile
+pnpm run check
 ```

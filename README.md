@@ -2,7 +2,7 @@
 
 Ejemplos publicos para integrar [`@ltorresu82/firmagob-client`](https://www.npmjs.com/package/@ltorresu82/firmagob-client) en proyectos Node.js, Hono y Astro.
 
-Este repositorio es un monorepo Turborepo con npm workspaces. No es oficial de Gobierno Digital y no incluye credenciales. Los ejemplos se basan en fuentes oficiales publicas de FirmaGob y en el paquete npm publicado.
+Este repositorio es un monorepo Turborepo con pnpm workspaces. No es oficial de Gobierno Digital y no incluye credenciales. Los ejemplos se basan en fuentes oficiales publicas de FirmaGob y en el paquete npm publicado.
 
 ## Ejemplos
 
@@ -32,33 +32,41 @@ No usar documentos productivos ni credenciales productivas para pruebas publicas
 Requiere Node.js `>=22.12.0`, porque el ejemplo Astro usa Astro 6.
 
 ```bash
-npm ci
+pnpm install
 ```
 
 ## Verificacion
 
 ```bash
-npm run check
+pnpm run check
 ```
 
 ## Uso rapido
 
+Levantar la demo web/API integrada:
+
+```bash
+pnpm dev
+```
+
+Esto levanta Hono y Astro en paralelo. El CLI queda separado porque requiere recibir un hash como argumento.
+
 CLI:
 
 ```bash
-npm run node-cli -- HASH_SHA256_BASE64
+pnpm dev:node HASH_SHA256_BASE64
 ```
 
 API Hono:
 
 ```bash
-npm run hono-api
+pnpm dev:hono
 ```
 
 Astro:
 
 ```bash
-npm run astro-upload
+pnpm dev:astro
 ```
 
 ## Fuente principal

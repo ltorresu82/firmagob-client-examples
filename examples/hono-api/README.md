@@ -3,7 +3,7 @@
 API minima para firmar hashes PDF con FirmaGob.
 
 ```bash
-npm run hono-api
+pnpm dev:hono
 ```
 
 Endpoint:

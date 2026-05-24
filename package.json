@@ -3,17 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "npm@10.9.7",
-  "workspaces": [
-    "examples/*"
-  ],
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "turbo run build",
     "check": "turbo run check",
+    "dev": "turbo run dev --filter=@examples/hono-api --filter=@examples/astro-upload",
+    "dev:astro": "pnpm --filter @examples/astro-upload dev",
+    "dev:hono": "pnpm --filter @examples/hono-api dev",
+    "dev:node": "pnpm --filter @examples/node-cli dev",
     "typecheck": "turbo run typecheck",
-    "node-cli": "npm --workspace @examples/node-cli run dev --",
-    "hono-api": "npm --workspace @examples/hono-api run dev",
-    "astro-upload": "npm --workspace @examples/astro-upload run dev"
+    "node-cli": "pnpm dev:node",
+    "hono-api": "pnpm dev:hono",
+    "astro-upload": "pnpm dev:astro"
   },
   "engines": {
     "node": ">=22.12.0"

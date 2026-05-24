@@ -4,7 +4,7 @@ import { readFirmaGobConfig } from "./config.js";
 const hash = process.argv[2];
 
 if (!hash) {
-  console.error("Usage: npm run node-cli -- HASH_SHA256_BASE64");
+  console.error("Usage: pnpm dev:node HASH_SHA256_BASE64");
   process.exit(1);
 }
 
