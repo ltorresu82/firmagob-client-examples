@@ -12,6 +12,9 @@
     "hono-api": "npm --workspace @examples/hono-api run dev",
     "astro-upload": "npm --workspace @examples/astro-upload run dev"
   },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "devDependencies": {
     "typescript": "^5.4.5"
   }

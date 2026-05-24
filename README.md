@@ -29,6 +29,8 @@ No usar documentos productivos ni credenciales productivas para pruebas publicas
 
 ## Instalacion
 
+Requiere Node.js `>=22.12.0`, porque el ejemplo Astro usa Astro 6.
+
 ```bash
 npm ci
 ```
