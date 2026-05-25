@@ -4,6 +4,28 @@ import { Hono } from "hono";
 import { readFirmaGobConfig } from "./config.js";
 
 const app = new Hono();
+const allowedOrigins = new Set(["http://127.0.0.1:4200", "http://localhost:4200"]);
+
+app.use(
+  "/sign/*",
+  async (c, next) => {
+    const origin = c.req.raw.headers.get("origin")?.trim();
+
+    if (origin && allowedOrigins.has(origin)) {
+      c.header("Access-Control-Allow-Origin", origin);
+      c.header("Vary", "Origin", { append: true });
+    }
+
+    c.header("Access-Control-Allow-Headers", "content-type");
+    c.header("Access-Control-Allow-Methods", "POST,OPTIONS");
+
+    if (c.req.method === "OPTIONS") {
+      return c.body(null, 204);
+    }
+
+    await next();
+  }
+);
 
 app.get("/health", (c) => c.json({ ok: true }));
 

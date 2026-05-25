@@ -1,7 +1,7 @@
 node_modules/
 .turbo/
 dist/
-.astro/
+.angular/
 .env
 .env.*
 !.env.example

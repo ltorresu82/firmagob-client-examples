@@ -7,14 +7,14 @@
   "scripts": {
     "build": "turbo run build",
     "check": "turbo run check",
-    "dev": "turbo run dev --filter=@examples/hono-api --filter=@examples/astro-upload",
-    "dev:astro": "pnpm --filter @examples/astro-upload dev",
+    "dev": "turbo run dev --filter=@examples/hono-api --filter=@examples/angular-upload",
+    "dev:angular": "pnpm --filter @examples/angular-upload dev",
     "dev:hono": "pnpm --filter @examples/hono-api dev",
     "dev:node": "pnpm --filter @examples/node-cli dev",
     "typecheck": "turbo run typecheck",
     "node-cli": "pnpm dev:node",
     "hono-api": "pnpm dev:hono",
-    "astro-upload": "pnpm dev:astro"
+    "angular-upload": "pnpm dev:angular"
   },
   "engines": {
     "node": ">=22.12.0"
