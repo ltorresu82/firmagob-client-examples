@@ -1,4 +1,4 @@
-import { FirmaGobClient } from "@ltorresu82/firmagob-client";
+import { FirmaGobClient, FirmaGobClientError } from "@ltorresu82/firmagob-client";
 import { readFirmaGobConfig } from "./config.js";
 
 const hash = process.argv[2];
@@ -19,8 +19,36 @@ const client = new FirmaGobClient({
   testUrl: config.endpointApi,
 });
 
-const result = await client.signHashes([
-  { content: hash, contentType: "application/pdf" },
-]);
+try {
+  const result = await client.signHashes([
+    { content: hash, contentType: "application/pdf" },
+  ]);
 
-console.log(JSON.stringify(result, null, 2));
+  console.log(JSON.stringify(result, null, 2));
+} catch (error) {
+  if (error instanceof FirmaGobClientError) {
+    console.error(
+      JSON.stringify(
+        {
+          error: error.message,
+          status: error.status,
+          responseBody: redactSecrets(error.responseBody),
+        },
+        null,
+        2
+      )
+    );
+    process.exit(1);
+  }
+
+  throw error;
+}
+
+function redactSecrets(value: string | undefined): string | undefined {
+  return value
+    ?.replace(
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+      "[redacted-token-key]"
+    )
+    .replace(/[0-9a-f]{32}/gi, "[redacted-secret]");
+}

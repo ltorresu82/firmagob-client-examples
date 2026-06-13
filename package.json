@@ -10,7 +10,7 @@
     "dev": "turbo run dev --filter=@examples/hono-api --filter=@examples/angular-upload",
     "dev:angular": "pnpm --filter @examples/angular-upload dev",
     "dev:hono": "pnpm --filter @examples/hono-api dev",
-    "dev:node": "pnpm --filter @examples/node-cli dev",
+    "dev:node": "pnpm --filter @examples/node-cli exec tsx src/sign-hash.ts",
     "typecheck": "turbo run typecheck",
     "node-cli": "pnpm dev:node",
     "hono-api": "pnpm dev:hono",
@@ -21,6 +21,11 @@
   },
   "devDependencies": {
     "turbo": "^2.5.8",
-    "typescript": "^5.4.5"
+    "typescript": "~5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild": "0.28.1"
+    }
   }
 }
