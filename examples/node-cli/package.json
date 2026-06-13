@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "pnpm run typecheck",
-    "dev": "tsx src/sign-hash.ts",
+    "dev": "node --env-file-if-exists=../../.env --import tsx src/sign-hash.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

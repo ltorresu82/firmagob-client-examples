@@ -10,7 +10,7 @@
     "dev": "turbo run dev --filter=@examples/hono-api --filter=@examples/angular-upload",
     "dev:angular": "pnpm --filter @examples/angular-upload dev",
     "dev:hono": "pnpm --filter @examples/hono-api dev",
-    "dev:node": "pnpm --filter @examples/node-cli exec tsx src/sign-hash.ts",
+    "dev:node": "pnpm --filter @examples/node-cli exec node --env-file-if-exists=../../.env --import tsx src/sign-hash.ts",
     "typecheck": "turbo run typecheck",
     "node-cli": "pnpm dev:node",
     "hono-api": "pnpm dev:hono",
