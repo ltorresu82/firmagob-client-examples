@@ -5,5 +5,6 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.attended.example
 tmp/
 *.tgz

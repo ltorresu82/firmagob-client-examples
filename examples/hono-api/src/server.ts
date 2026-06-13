@@ -1,5 +1,9 @@
 import { serve } from "@hono/node-server";
-import { FirmaGobClient, FirmaGobClientError } from "@ltorresu82/firmagob-client";
+import {
+  FirmaGobClient,
+  FirmaGobClientError,
+  Purpose,
+} from "@ltorresu82/firmagob-client";
 import { Hono } from "hono";
 import { readFirmaGobConfig } from "./config.js";
 
@@ -31,15 +35,26 @@ app.get("/health", (c) => c.json({ ok: true }));
 
 app.post("/sign/hash", async (c) => {
   const body = await c.req
-    .json<{ hash?: string }>()
-    .catch((): { hash?: string } => ({}));
+    .json<{ hash?: string; otp?: string }>()
+    .catch((): { hash?: string; otp?: string } => ({}));
 
-  if (!body.hash) {
+  const hash = body.hash?.trim();
+  const otp = body.otp?.trim();
+
+  if (!hash) {
     return c.json({ error: "hash is required" }, 400);
   }
 
   try {
     const config = readFirmaGobConfig();
+
+    if (config.purpose === Purpose.Attended && !otp) {
+      return c.json(
+        { error: "otp is required for attended signatures" },
+        400
+      );
+    }
+
     const client = new FirmaGobClient({
       apiTokenKey: config.apiTokenKey,
       secret: config.secret,
@@ -50,8 +65,8 @@ app.post("/sign/hash", async (c) => {
       testUrl: config.endpointApi,
     });
     const result = await client.signHashes([
-      { content: body.hash, contentType: "application/pdf" },
-    ]);
+      { content: hash, contentType: "application/pdf" },
+    ], otp ? { otp } : undefined);
 
     return c.json(result);
   } catch (error) {

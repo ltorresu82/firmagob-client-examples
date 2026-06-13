@@ -2,6 +2,7 @@ import { FirmaGobClient, FirmaGobClientError } from "@ltorresu82/firmagob-client
 import { readFirmaGobConfig } from "./config.js";
 
 const hash = process.argv[2];
+const otp = process.argv[3]?.trim();
 
 if (!hash) {
   console.error("Usage: pnpm dev:node HASH_SHA256_BASE64");
@@ -22,7 +23,7 @@ const client = new FirmaGobClient({
 try {
   const result = await client.signHashes([
     { content: hash, contentType: "application/pdf" },
-  ]);
+  ], otp ? { otp } : undefined);
 
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {

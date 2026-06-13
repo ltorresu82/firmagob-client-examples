@@ -34,6 +34,20 @@ const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
             spellcheck="false"
           ></textarea>
 
+          <div class="field-header">
+            <label for="otp">OTP de firma atendida</label>
+            <span>Solo Propósito General</span>
+          </div>
+          <input
+            id="otp"
+            name="otp"
+            [(ngModel)]="otp"
+            autocomplete="one-time-code"
+            inputmode="numeric"
+            maxlength="8"
+            placeholder="6 digitos"
+          />
+
           @if (validationMessage()) {
             <p class="message" role="alert">{{ validationMessage() }}</p>
           }
@@ -208,6 +222,17 @@ const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
         word-break: break-word;
       }
 
+      input {
+        width: min(220px, 100%);
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 11px 12px;
+        color: #0f172a;
+        background: #f8fafc;
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 14px;
+      }
+
       @media (max-width: 820px) {
         .workspace {
           grid-template-columns: 1fr;
@@ -228,6 +253,7 @@ const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
 export class App {
   protected readonly endpoint = SIGN_HASH_ENDPOINT;
   protected readonly hash = signal("");
+  protected readonly otp = signal("");
   protected readonly loading = signal(false);
   protected readonly status = signal("");
   protected readonly output = signal("Sin respuesta.");
@@ -244,6 +270,7 @@ export class App {
 
   protected async signHash(): Promise<void> {
     const hash = this.hash().trim();
+    const otp = this.otp().trim();
     if (!hash) {
       return;
     }
@@ -254,7 +281,10 @@ export class App {
 
     try {
       const response = await firstValueFrom(
-        this.http.post<unknown>(SIGN_HASH_ENDPOINT, { hash })
+        this.http.post<unknown>(SIGN_HASH_ENDPOINT, {
+          hash,
+          ...(otp ? { otp } : {}),
+        })
       );
       this.status.set("HTTP 200");
       this.output.set(JSON.stringify(response, null, 2));
