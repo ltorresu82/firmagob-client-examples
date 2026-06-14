@@ -18,6 +18,7 @@ const API_BASE_URL = "http://localhost:8787";
 const SIGN_HASH_ENDPOINT = `${API_BASE_URL}/sign/hash`;
 const SIGN_PDF_ENDPOINT = `${API_BASE_URL}/sign/pdf`;
 const VISIBLE_SIGNATURE_SAMPLE_URL = `${API_BASE_URL}/visible-signature/sample`;
+const VISIBLE_SIGNATURE_BASE_IMAGE_URL = "/firma1.png";
 
 type DemoMode = "pdf" | "hash";
 
@@ -116,7 +117,7 @@ type SignPdfResponse = {
                 <input
                   type="checkbox"
                   [ngModel]="visibleSignature()"
-                  (ngModelChange)="visibleSignature.set($event)"
+                  (ngModelChange)="setVisibleSignature($event)"
                   name="visibleSignature"
                 />
                 <span>Agregar apariencia visible oficial</span>
@@ -126,13 +127,13 @@ type SignPdfResponse = {
                 <div class="visible-grid">
                   <div class="signature-preview" aria-label="Vista previa firma visible">
                     <img
-                      [src]="visibleSignatureSampleUrl"
-                      alt="Firma visible de muestra"
+                      [src]="visibleSignaturePreviewUrl() || visibleSignatureSampleUrl"
+                      alt="Apariencia visible de firma"
                     />
                   </div>
                   <p>
-                    Layout oficial: imagen PNG transparente, pagina LAST,
-                    coordenadas del XML AgileSignerConfig.
+                    Imagen PNG transparente generada para el layout oficial:
+                    firma de muestra, modo, fecha y aviso de validacion.
                   </p>
                 </div>
               }
@@ -724,6 +725,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly otp = signal("");
   protected readonly file = signal<File | null>(null);
   protected readonly visibleSignature = signal(true);
+  protected readonly visibleSignaturePreviewUrl = signal("");
   protected readonly originalPdfUrl = signal("");
   protected readonly originalPdfSafeUrl = signal<SafeResourceUrl | null>(null);
   protected readonly signedPdfUrl = signal("");
@@ -830,11 +832,14 @@ export class App implements OnInit, OnDestroy {
     } catch {
       this.output.set("No se pudo leer la configuracion de Hono.");
     }
+
+    await this.refreshVisibleSignaturePreview();
   }
 
   ngOnDestroy(): void {
     this.revokeUrl(this.originalPdfUrl());
     this.revokeUrl(this.signedPdfUrl());
+    this.revokeUrl(this.visibleSignaturePreviewUrl());
   }
 
   protected selectFile(event: Event): void {
@@ -863,9 +868,19 @@ export class App implements OnInit, OnDestroy {
     this.selectedPurpose.set(purpose);
     this.clearSignedPdf();
     this.status.set("idle");
+    void this.refreshVisibleSignaturePreview();
 
     if (!this.requiresOtp()) {
       this.otp.set("");
+    }
+  }
+
+  protected setVisibleSignature(value: boolean): void {
+    this.visibleSignature.set(value);
+    this.clearSignedPdf();
+
+    if (value) {
+      void this.refreshVisibleSignaturePreview();
     }
   }
 
@@ -905,7 +920,7 @@ export class App implements OnInit, OnDestroy {
     );
   }
 
-  private signPdf(): Promise<SignPdfResponse> {
+  private async signPdf(): Promise<SignPdfResponse> {
     const file = this.file();
 
     if (!file) {
@@ -924,9 +939,45 @@ export class App implements OnInit, OnDestroy {
 
     if (this.visibleSignature()) {
       form.set("visibleSignature", "true");
+      form.set(
+        "visibleSignatureImage",
+        await this.getVisibleSignatureImageDataUrl()
+      );
     }
 
     return firstValueFrom(this.http.post<SignPdfResponse>(SIGN_PDF_ENDPOINT, form));
+  }
+
+  private async getVisibleSignatureImageDataUrl(): Promise<string> {
+    if (!this.visibleSignaturePreviewUrl()) {
+      await this.refreshVisibleSignaturePreview();
+    }
+
+    const dataUrl = this.visibleSignaturePreviewUrl();
+
+    if (!dataUrl) {
+      throw new Error("No se pudo preparar la apariencia visible");
+    }
+
+    return dataUrl;
+  }
+
+  private async refreshVisibleSignaturePreview(): Promise<void> {
+    const previousUrl = this.visibleSignaturePreviewUrl();
+
+    try {
+      const dataUrl = await createVisibleSignatureAppearance({
+        imageUrl: VISIBLE_SIGNATURE_BASE_IMAGE_URL,
+        purposeLabel: this.selectedPurposeLabel(),
+        generatedAt: new Date(),
+      });
+
+      this.visibleSignaturePreviewUrl.set(dataUrl);
+      this.revokeUrl(previousUrl);
+    } catch (error) {
+      this.visibleSignaturePreviewUrl.set("");
+      this.output.set(formatError(error));
+    }
   }
 
   private applyResponse(response: unknown): void {
@@ -975,7 +1026,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   private revokeUrl(url: string): void {
-    if (url) {
+    if (url.startsWith("blob:")) {
       URL.revokeObjectURL(url);
     }
   }
@@ -994,6 +1045,139 @@ function base64ToBytes(value: string): Uint8Array {
   }
 
   return bytes;
+}
+
+async function createVisibleSignatureAppearance(options: {
+  imageUrl: string;
+  purposeLabel: string;
+  generatedAt: Date;
+}): Promise<string> {
+  const signatureImage = await loadImage(options.imageUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 390;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Canvas is not available");
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "rgba(255, 255, 255, 0.88)";
+  roundRect(context, 18, 18, canvas.width - 36, canvas.height - 36, 24);
+  context.fill();
+  context.strokeStyle = "rgba(31, 95, 63, 0.5)";
+  context.lineWidth = 4;
+  roundRect(context, 18, 18, canvas.width - 36, canvas.height - 36, 24);
+  context.stroke();
+
+  context.drawImage(signatureImage, 44, 82, 510, 186);
+  context.strokeStyle = "rgba(31, 95, 63, 0.28)";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(590, 74);
+  context.lineTo(590, 315);
+  context.stroke();
+
+  context.fillStyle = "#1f5f3f";
+  context.font = "bold 30px Segoe UI, Arial, sans-serif";
+  context.fillText("FIRMADO DIGITALMENTE", 630, 104);
+  context.fillStyle = "#111827";
+  context.font = "bold 44px Segoe UI, Arial, sans-serif";
+  context.fillText("FirmaGob", 630, 160);
+  context.fillStyle = "#2f3f34";
+  context.font = "25px Segoe UI, Arial, sans-serif";
+  context.fillText(`Modo: ${normalizeAppearanceText(options.purposeLabel)}`, 630, 214);
+  context.fillText(`Fecha: ${formatAppearanceDate(options.generatedAt)}`, 630, 254);
+  context.font = "21px Segoe UI, Arial, sans-serif";
+  context.fillText("Validez verificable en el panel de firmas del PDF", 630, 306);
+
+  return canvas.toDataURL("image/png");
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return requestImageBlob(url)
+    .then(blobToDataUrl)
+    .then((dataUrl) => loadImageDataUrl(dataUrl));
+}
+
+function requestImageBlob(url: string): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("GET", url);
+    request.responseType = "blob";
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        resolve(request.response as Blob);
+        return;
+      }
+
+      reject(new Error("Could not load visible signature image"));
+    };
+    request.onerror = () => reject(new Error("Could not load visible signature image"));
+    request.send();
+  });
+}
+
+function loadImageDataUrl(dataUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not load visible signature image"));
+    image.src = dataUrl;
+  });
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Could not read visible signature image"));
+    };
+    reader.onerror = () => reject(new Error("Could not read visible signature image"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function roundRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+): void {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.lineTo(x + width, y + height - radius);
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.lineTo(x + radius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - radius);
+  context.lineTo(x, y + radius);
+  context.quadraticCurveTo(x, y, x + radius, y);
+  context.closePath();
+}
+
+function normalizeAppearanceText(value: string): string {
+  return value.trim().replace(/\s+/g, " ") || "FirmaGob";
+}
+
+function formatAppearanceDate(date: Date): string {
+  const pad = (value: number): string => value.toString().padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+    date.getSeconds()
+  )}`;
 }
 
 function formatError(error: unknown): string {

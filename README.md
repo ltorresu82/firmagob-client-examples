@@ -75,7 +75,7 @@ curl -F "file=@documento.pdf;type=application/pdf" -F "otp=123456" http://localh
 
 La respuesta de `POST /sign/pdf` incluye el PDF firmado en `result.files[0].content` como base64. Sin propiedad `layout`, FirmaGob genera una firma digital invisible: el PDF se ve igual, pero lectores como Adobe Acrobat muestran la firma en el panel de firmas.
 
-La demo Angular puede agregar apariencia visible usando el mismo mecanismo del ejemplo oficial `firma-pdf-layout-ejemplo`: Hono usa la imagen de muestra `firma1.png`, la inserta en un XML `AgileSignerConfig` dentro de la propiedad `layout`, y FirmaGob incrusta esa imagen visible durante la firma.
+La demo Angular puede agregar apariencia visible usando el mismo mecanismo del ejemplo oficial `firma-pdf-layout-ejemplo`: toma la imagen de muestra `firma1.png` como asset local del frontend, genera una apariencia PNG transparente con datos no sensibles de trazabilidad, la envia a Hono y Hono la inserta en un XML `AgileSignerConfig` dentro de la propiedad `layout`. FirmaGob incrusta esa imagen visible durante la firma.
 
 Angular:
 

@@ -8,10 +8,10 @@ export type VisibleLayoutInput = {
 };
 
 export const DEFAULT_VISIBLE_LAYOUT = {
-  llx: 250,
-  lly: 80,
-  urx: 540,
-  ury: 180,
+  llx: 150,
+  lly: 72,
+  urx: 560,
+  ury: 205,
   page: "LAST",
 } as const;
 
