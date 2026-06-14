@@ -12,7 +12,7 @@ const app = new Hono();
 const allowedOrigins = new Set(["http://127.0.0.1:4200", "http://localhost:4200"]);
 
 app.use(
-  "/sign/*",
+  "*",
   async (c, next) => {
     const origin = c.req.raw.headers.get("origin")?.trim();
 
@@ -33,6 +33,15 @@ app.use(
 );
 
 app.get("/health", (c) => c.json({ ok: true }));
+
+app.get("/config", (c) => {
+  const config = readFirmaGobConfig();
+
+  return c.json({
+    purpose: config.purpose,
+    requiresOtp: config.purpose === Purpose.Attended,
+  });
+});
 
 app.post("/sign/hash", async (c) => {
   const body = await c.req
