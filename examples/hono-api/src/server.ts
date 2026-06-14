@@ -5,12 +5,16 @@ import {
   Purpose,
 } from "@ltorresu82/firmagob-client";
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { Hono } from "hono";
 import { readFirmaGobConfig } from "./config.js";
 import { createVisibleSignatureLayout } from "./visible-layout.js";
 
 const app = new Hono();
 const allowedOrigins = new Set(["http://127.0.0.1:4200", "http://localhost:4200"]);
+const sampleVisibleSignatureImage = readSampleVisibleSignatureImage();
+const sampleVisibleSignatureImageBase64 =
+  sampleVisibleSignatureImage.toString("base64");
 
 app.use(
   "*",
@@ -34,6 +38,13 @@ app.use(
 );
 
 app.get("/health", (c) => c.json({ ok: true }));
+
+app.get("/visible-signature/sample", (c) =>
+  c.body(toArrayBuffer(sampleVisibleSignatureImage), 200, {
+    "content-type": "image/png",
+    "cache-control": "public, max-age=3600",
+  })
+);
 
 app.get("/config", (c) => {
   const config = readFirmaGobConfig();
@@ -115,13 +126,12 @@ app.post("/sign/pdf", async (c) => {
   let layout: string | undefined;
 
   if (visibleSignature) {
-    if (typeof visibleSignatureImageValue !== "string") {
-      return c.json({ error: "visibleSignatureImage is required" }, 400);
-    }
-
     try {
       layout = createVisibleSignatureLayout({
-        imageBase64: visibleSignatureImageValue,
+        imageBase64:
+          typeof visibleSignatureImageValue === "string"
+            ? visibleSignatureImageValue
+            : sampleVisibleSignatureImageBase64,
       });
     } catch (error) {
       return c.json(
@@ -185,3 +195,24 @@ const port = Number(process.env.PORT ?? 8787);
 
 serve({ fetch: app.fetch, port });
 console.log(`Hono FirmaGob example listening on http://localhost:${port}`);
+
+function readSampleVisibleSignatureImage(): Buffer {
+  const candidates = [
+    new URL("./assets/firma1.png", import.meta.url),
+    new URL("../src/assets/firma1.png", import.meta.url),
+  ];
+  const match = candidates.find((candidate) => existsSync(candidate));
+
+  if (!match) {
+    throw new Error("Missing sample visible signature image: firma1.png");
+  }
+
+  return readFileSync(match);
+}
+
+function toArrayBuffer(buffer: Buffer): ArrayBuffer {
+  return buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  ) as ArrayBuffer;
+}
