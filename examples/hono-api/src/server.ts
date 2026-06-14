@@ -7,6 +7,7 @@ import {
 import { createHash } from "node:crypto";
 import { Hono } from "hono";
 import { readFirmaGobConfig } from "./config.js";
+import { createVisibleSignatureLayout } from "./visible-layout.js";
 
 const app = new Hono();
 const allowedOrigins = new Set(["http://127.0.0.1:4200", "http://localhost:4200"]);
@@ -22,7 +23,7 @@ app.use(
     }
 
     c.header("Access-Control-Allow-Headers", "content-type");
-    c.header("Access-Control-Allow-Methods", "POST,OPTIONS");
+    c.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
 
     if (c.req.method === "OPTIONS") {
       return c.body(null, 204);
@@ -95,7 +96,11 @@ app.post("/sign/pdf", async (c) => {
   const body = await c.req.parseBody();
   const file = body.file;
   const otpValue = body.otp;
+  const visibleSignatureValue = body.visibleSignature;
+  const visibleSignatureImageValue = body.visibleSignatureImage;
   const otp = typeof otpValue === "string" ? otpValue.trim() : undefined;
+  const visibleSignature =
+    typeof visibleSignatureValue === "string" && visibleSignatureValue === "true";
 
   if (!(file instanceof File)) {
     return c.json({ error: "file is required" }, 400);
@@ -107,6 +112,24 @@ app.post("/sign/pdf", async (c) => {
 
   const fileBytes = Buffer.from(await file.arrayBuffer());
   const checksum = createHash("sha256").update(fileBytes).digest("hex");
+  let layout: string | undefined;
+
+  if (visibleSignature) {
+    if (typeof visibleSignatureImageValue !== "string") {
+      return c.json({ error: "visibleSignatureImage is required" }, 400);
+    }
+
+    try {
+      layout = createVisibleSignatureLayout({
+        imageBase64: visibleSignatureImageValue,
+      });
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : "Invalid layout" },
+        400
+      );
+    }
+  }
 
   try {
     const config = readFirmaGobConfig();
@@ -133,6 +156,7 @@ app.post("/sign/pdf", async (c) => {
         contentType: "application/pdf",
         checksum,
         description: file.name,
+        layout,
       },
     ], otp ? { otp } : undefined);
 
@@ -141,6 +165,7 @@ app.post("/sign/pdf", async (c) => {
         fileName: file.name,
         fileSize: file.size,
         checksum,
+        visibleSignature,
       },
       result,
     });

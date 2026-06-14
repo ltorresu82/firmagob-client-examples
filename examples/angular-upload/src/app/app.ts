@@ -102,6 +102,38 @@ type SignPdfResponse = {
               />
             </div>
 
+            <div class="visible-signature">
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  [ngModel]="visibleSignature()"
+                  (ngModelChange)="visibleSignature.set($event)"
+                  name="visibleSignature"
+                />
+                <span>Agregar apariencia visible oficial</span>
+              </label>
+
+              @if (visibleSignature()) {
+                <div class="visible-grid">
+                  <label for="visibleSigner">Nombre visible</label>
+                  <input
+                    id="visibleSigner"
+                    name="visibleSigner"
+                    [(ngModel)]="visibleSigner"
+                    maxlength="70"
+                  />
+                  <div class="signature-preview" aria-label="Vista previa del sello">
+                    <div>
+                      <strong>{{ visibleSigner() || "Firmante" }}</strong>
+                      <span>Firmado digitalmente via FirmaGob</span>
+                      <small>{{ visibleDateLabel() }}</small>
+                    </div>
+                    <b>FirmaGob</b>
+                  </div>
+                </div>
+              }
+            </div>
+
             <div class="preview-grid">
               <article class="preview">
                 <div class="preview-title">
@@ -345,6 +377,69 @@ type SignPdfResponse = {
         gap: 8px;
       }
 
+      .visible-signature {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid #dbe4d9;
+        border-radius: 8px;
+        background: #f9fbf8;
+      }
+
+      .check-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .check-row input {
+        min-height: auto;
+        width: 18px;
+        height: 18px;
+        padding: 0;
+      }
+
+      .visible-grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      .signature-preview {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        max-width: 420px;
+        min-height: 96px;
+        padding: 14px 16px;
+        border: 1px solid #2f6b45;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
+      .signature-preview div {
+        display: grid;
+        gap: 4px;
+      }
+
+      .signature-preview strong {
+        color: #111827;
+        font-size: 22px;
+        line-height: 1.05;
+      }
+
+      .signature-preview span,
+      .signature-preview small {
+        color: #344438;
+        font-size: 11px;
+      }
+
+      .signature-preview b {
+        color: #1f5f3f;
+        font-size: 13px;
+      }
+
       label,
       .preview-title span {
         font-weight: 900;
@@ -566,6 +661,8 @@ export class App implements OnInit, OnDestroy {
   protected readonly hash = signal("");
   protected readonly otp = signal("");
   protected readonly file = signal<File | null>(null);
+  protected readonly visibleSignature = signal(true);
+  protected readonly visibleSigner = signal("FirmaGob Sandbox");
   protected readonly originalPdfUrl = signal("");
   protected readonly originalPdfSafeUrl = signal<SafeResourceUrl | null>(null);
   protected readonly signedPdfUrl = signal("");
@@ -590,7 +687,7 @@ export class App implements OnInit, OnDestroy {
   );
   protected readonly documentSubtitle = computed(() =>
     this.mode() === "pdf"
-      ? "Vista previa del documento original y del resultado firmado."
+      ? "Vista previa del documento original y del PDF firmado por FirmaGob."
       : "Firma un hash ya calculado por otro sistema."
   );
   protected readonly originalSizeLabel = computed(() => {
@@ -649,6 +746,9 @@ export class App implements OnInit, OnDestroy {
           : "Selecciona documento";
     }
   });
+  protected readonly visibleDateLabel = computed(() =>
+    new Date().toISOString().replace("T", " ").slice(0, 19)
+  );
 
   private readonly http = inject(HttpClient);
   private readonly sanitizer = inject(DomSanitizer);
@@ -742,6 +842,13 @@ export class App implements OnInit, OnDestroy {
       form.set("otp", otp);
     }
 
+    if (this.visibleSignature()) {
+      form.set("visibleSignature", "true");
+      form.set("visibleSignatureImage", createVisibleSignaturePng(
+        this.visibleSigner()
+      ));
+    }
+
     return firstValueFrom(this.http.post<SignPdfResponse>(SIGN_PDF_ENDPOINT, form));
   }
 
@@ -810,6 +917,54 @@ function base64ToBytes(value: string): Uint8Array {
   }
 
   return bytes;
+}
+
+function createVisibleSignaturePng(signerName: string): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = 900;
+  canvas.height = 300;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Canvas is not available");
+  }
+
+  const name = normalizeVisibleText(signerName, "Firmante");
+  const signedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#245f3e";
+  context.lineWidth = 4;
+  context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+  context.fillStyle = "#245f3e";
+  context.fillRect(8, 8, canvas.width - 16, 58);
+  context.fillStyle = "#ffffff";
+  context.font = "bold 28px Segoe UI, Arial, sans-serif";
+  context.fillText("FIRMADO DIGITALMENTE", 32, 47);
+  context.fillStyle = "#111827";
+  context.font = "bold 54px Segoe UI, Arial, sans-serif";
+  context.fillText(truncateVisibleText(name, 34), 32, 138);
+  context.fillStyle = "#2f3f34";
+  context.font = "24px Segoe UI, Arial, sans-serif";
+  context.fillText("Firmado digitalmente via FirmaGob", 32, 190);
+  context.fillText(`Fecha: ${signedAt} UTC`, 32, 228);
+  context.fillStyle = "#1f5f3f";
+  context.font = "bold 28px Segoe UI, Arial, sans-serif";
+  context.fillText("FirmaGob", 726, 252);
+
+  return canvas.toDataURL("image/png");
+}
+
+function normalizeVisibleText(value: string, fallback: string): string {
+  const normalized = value.trim().replace(/\s+/g, " ");
+
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function truncateVisibleText(value: string, maxLength: number): string {
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 1)}...`;
 }
 
 function formatError(error: unknown): string {

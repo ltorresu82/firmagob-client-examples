@@ -10,7 +10,7 @@ Este repositorio es un monorepo Turborepo con pnpm workspaces. No es oficial de 
 | --- | --- |
 | [`examples/node-cli`](examples/node-cli) | CLI minima para firmar un hash PDF con FirmaGob. |
 | [`examples/hono-api`](examples/hono-api) | API Hono con endpoints `POST /sign/hash` y `POST /sign/pdf`. |
-| [`examples/angular-upload`](examples/angular-upload) | App Angular con formulario simple para firmar hash o enviar un PDF pequeño a la API Hono local. |
+| [`examples/angular-upload`](examples/angular-upload) | App Angular para firmar hash o enviar un PDF pequeno a la API Hono local, con preview y apariencia visible opcional. |
 
 ## Variables requeridas
 
@@ -25,7 +25,7 @@ FIRMAGOB_SECRET=
 FIRMAGOB_ENDPOINT_API=https://api.firma.cert.digital.gob.cl/firma/v2/files/tickets
 ```
 
-Para firma atendida use `FIRMAGOB_PURPOSE=Propósito General` y envie el OTP en la llamada. En la demo Angular el campo OTP es opcional porque el mismo formulario sirve para modo `Desatendido` y `Propósito General`; la API Hono lo exige cuando el ambiente esta configurado como atendido.
+Para firma atendida use `FIRMAGOB_PURPOSE=Proposito General` y envie el OTP en la llamada. En la demo Angular el campo OTP es opcional porque el mismo formulario sirve para modo `Desatendido` y `Proposito General`; la API Hono lo exige cuando el ambiente esta configurado como atendido.
 
 No usar documentos productivos ni credenciales productivas para pruebas publicas.
 
@@ -73,6 +73,8 @@ curl -F "file=@documento.pdf;type=application/pdf" -F "otp=123456" http://localh
 
 La respuesta de `POST /sign/pdf` incluye el PDF firmado en `result.files[0].content` como base64. Sin propiedad `layout`, FirmaGob genera una firma digital invisible: el PDF se ve igual, pero lectores como Adobe Acrobat muestran la firma en el panel de firmas.
 
+La demo Angular puede agregar apariencia visible usando el mismo mecanismo del ejemplo oficial `firma-pdf-layout-ejemplo`: genera una imagen PNG en el navegador, la envia al API Hono y Hono la inserta en un XML `AgileSignerConfig` dentro de la propiedad `layout`. FirmaGob incrusta esa imagen visible durante la firma.
+
 Angular:
 
 ```bash
@@ -85,3 +87,4 @@ pnpm dev:angular
 - Repo: [`ltorresu82/firmagob-client`](https://github.com/ltorresu82/firmagob-client)
 - FirmaGob: [Manual API FirmaGob](https://firma.digital.gob.cl/biblioteca/manuales-firmagob/manual-api-firma/)
 - FirmaGob test: [Integracion API FirmaGob v2](https://firma-segpres.s3.us-east-2.amazonaws.com/20200413-IntegracionApiFirmav2.pdf)
+- FirmaGob layout visible: [`digital-gob-cl/firma-pdf-layout-ejemplo`](https://github.com/digital-gob-cl/firma-pdf-layout-ejemplo)
