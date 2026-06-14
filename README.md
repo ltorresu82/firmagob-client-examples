@@ -23,9 +23,11 @@ FIRMAGOB_RUN=
 FIRMAGOB_PURPOSE=Desatendido
 FIRMAGOB_SECRET=
 FIRMAGOB_ENDPOINT_API=https://api.firma.cert.digital.gob.cl/firma/v2/files/tickets
+FIRMAGOB_UNATTENDED_RUN=22222222
+FIRMAGOB_ATTENDED_RUN=11111111
 ```
 
-Para firma atendida use `FIRMAGOB_PURPOSE=Proposito General` y envie el OTP en la llamada. En la demo Angular el campo OTP es opcional porque el mismo formulario sirve para modo `Desatendido` y `Proposito General`; la API Hono lo exige cuando el ambiente esta configurado como atendido.
+La demo Angular permite alternar entre `Desatendido` y `Propósito General` en la misma pantalla. Para firma atendida ingrese el OTP en la llamada; la API Hono lo exige cuando el modo seleccionado requiere OTP. Los RUN opcionales permiten usar los usuarios sandbox publicos de cada modo sin editar el `.env` entre pruebas.
 
 No usar documentos productivos ni credenciales productivas para pruebas publicas.
 

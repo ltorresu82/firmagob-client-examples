@@ -7,7 +7,7 @@ import {
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { Hono } from "hono";
-import { readFirmaGobConfig } from "./config.js";
+import { getFirmaGobModes, readFirmaGobConfig } from "./config.js";
 import { createVisibleSignatureLayout } from "./visible-layout.js";
 
 const app = new Hono();
@@ -48,27 +48,34 @@ app.get("/visible-signature/sample", (c) =>
 
 app.get("/config", (c) => {
   const config = readFirmaGobConfig();
+  const modes = getFirmaGobModes();
 
   return c.json({
     purpose: config.purpose,
     requiresOtp: config.purpose === Purpose.Attended,
+    modes,
   });
 });
 
 app.post("/sign/hash", async (c) => {
   const body = await c.req
-    .json<{ hash?: string; otp?: string }>()
-    .catch((): { hash?: string; otp?: string } => ({}));
+    .json<{ hash?: string; otp?: string; purpose?: string }>()
+    .catch((): { hash?: string; otp?: string; purpose?: string } => ({}));
 
   const hash = body.hash?.trim();
   const otp = body.otp?.trim();
+  const requestedPurpose = parseRequestedPurpose(body.purpose);
 
   if (!hash) {
     return c.json({ error: "hash is required" }, 400);
   }
 
+  if (!requestedPurpose.ok) {
+    return c.json({ error: requestedPurpose.error }, 400);
+  }
+
   try {
-    const config = readFirmaGobConfig();
+    const config = readFirmaGobConfig({ purpose: requestedPurpose.value });
 
     if (config.purpose === Purpose.Attended && !otp) {
       return c.json(
@@ -107,9 +114,13 @@ app.post("/sign/pdf", async (c) => {
   const body = await c.req.parseBody();
   const file = body.file;
   const otpValue = body.otp;
+  const purposeValue = body.purpose;
   const visibleSignatureValue = body.visibleSignature;
   const visibleSignatureImageValue = body.visibleSignatureImage;
   const otp = typeof otpValue === "string" ? otpValue.trim() : undefined;
+  const requestedPurpose = parseRequestedPurpose(
+    typeof purposeValue === "string" ? purposeValue : undefined
+  );
   const visibleSignature =
     typeof visibleSignatureValue === "string" && visibleSignatureValue === "true";
 
@@ -119,6 +130,10 @@ app.post("/sign/pdf", async (c) => {
 
   if (file.type && file.type !== "application/pdf") {
     return c.json({ error: "file must be a PDF" }, 400);
+  }
+
+  if (!requestedPurpose.ok) {
+    return c.json({ error: requestedPurpose.error }, 400);
   }
 
   const fileBytes = Buffer.from(await file.arrayBuffer());
@@ -142,7 +157,7 @@ app.post("/sign/pdf", async (c) => {
   }
 
   try {
-    const config = readFirmaGobConfig();
+    const config = readFirmaGobConfig({ purpose: requestedPurpose.value });
 
     if (config.purpose === Purpose.Attended && !otp) {
       return c.json(
@@ -176,6 +191,7 @@ app.post("/sign/pdf", async (c) => {
         fileSize: file.size,
         checksum,
         visibleSignature,
+        purpose: config.purpose,
       },
       result,
     });
@@ -215,4 +231,20 @@ function toArrayBuffer(buffer: Buffer): ArrayBuffer {
     buffer.byteOffset,
     buffer.byteOffset + buffer.byteLength
   ) as ArrayBuffer;
+}
+
+function parseRequestedPurpose(
+  value: string | undefined
+): { ok: true; value?: Purpose } | { ok: false; error: string } {
+  if (!value) {
+    return { ok: true };
+  }
+
+  const purpose = getFirmaGobModes().find((mode) => mode.purpose === value)?.purpose;
+
+  if (purpose) {
+    return { ok: true, value: purpose };
+  }
+
+  return { ok: false, error: "Unsupported purpose" };
 }

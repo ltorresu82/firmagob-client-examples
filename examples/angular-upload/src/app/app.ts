@@ -24,6 +24,12 @@ type DemoMode = "pdf" | "hash";
 type ConfigResponse = {
   purpose: string;
   requiresOtp: boolean;
+  modes: Array<{
+    id: "unattended" | "attended";
+    label: string;
+    purpose: string;
+    requiresOtp: boolean;
+  }>;
 };
 
 type SignPdfResponse = {
@@ -32,6 +38,7 @@ type SignPdfResponse = {
     fileSize?: number;
     checksum?: string;
     visibleSignature?: boolean;
+    purpose?: string;
   };
   result?: {
     files?: Array<{
@@ -62,8 +69,8 @@ type SignPdfResponse = {
           <h1>Firma digital de documentos</h1>
         </div>
         <div class="mode-card">
-          <span>Modo API</span>
-          <strong>{{ configLabel() }}</strong>
+          <span>Modo firma</span>
+          <strong>{{ selectedPurposeLabel() }}</strong>
         </div>
       </header>
 
@@ -184,6 +191,24 @@ type SignPdfResponse = {
           <div class="status-card" [class.ok]="isSigned()" [class.error]="hasError()">
             <span>{{ statusTitle() }}</span>
             <strong>{{ statusDetail() }}</strong>
+          </div>
+
+          <div class="signature-mode" aria-label="Modo de firma">
+            @for (mode of config()?.modes ?? []; track mode.id) {
+              <label
+                class="signature-choice"
+                [class.active]="selectedPurpose() === mode.purpose"
+              >
+                <input
+                  type="radio"
+                  name="signaturePurpose"
+                  [checked]="selectedPurpose() === mode.purpose"
+                  (change)="selectPurpose(mode.purpose)"
+                />
+                <strong>{{ mode.label }}</strong>
+                <span>{{ mode.requiresOtp ? "Con OTP" : "Sin OTP" }}</span>
+              </label>
+            }
           </div>
 
           <div class="field">
@@ -518,6 +543,50 @@ type SignPdfResponse = {
         gap: 16px;
       }
 
+      .signature-mode {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .signature-choice {
+        display: grid;
+        gap: 4px;
+        min-height: 64px;
+        padding: 10px 12px;
+        border: 1px solid #cbd8ca;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #26362b;
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .signature-choice.active {
+        border-color: #1f5f3f;
+        background: #eff8f1;
+        box-shadow: inset 0 0 0 1px #1f5f3f;
+      }
+
+      .signature-choice input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .signature-mode strong {
+        font-size: 13px;
+      }
+
+      .signature-mode span {
+        color: #687568;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
       .status-card {
         display: grid;
         gap: 5px;
@@ -662,6 +731,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly signedPdfSize = signal(0);
   protected readonly checksum = signal("");
   protected readonly config = signal<ConfigResponse | null>(null);
+  protected readonly selectedPurpose = signal("");
   protected readonly loading = signal(false);
   protected readonly status = signal<"idle" | "sending" | "signed" | "error">(
     "idle"
@@ -669,7 +739,10 @@ export class App implements OnInit, OnDestroy {
   protected readonly output = signal("Sin respuesta tecnica.");
 
   protected readonly requiresOtp = computed(
-    () => this.config()?.requiresOtp ?? false
+    () => this.selectedMode()?.requiresOtp ?? false
+  );
+  protected readonly selectedMode = computed(() =>
+    this.config()?.modes.find((mode) => mode.purpose === this.selectedPurpose())
   );
   protected readonly activeEndpoint = computed(() =>
     this.mode() === "pdf" ? SIGN_PDF_ENDPOINT : SIGN_HASH_ENDPOINT
@@ -699,6 +772,10 @@ export class App implements OnInit, OnDestroy {
       return false;
     }
 
+    if (this.selectedPurpose().length === 0) {
+      return false;
+    }
+
     return this.mode() === "pdf"
       ? this.file() !== null
       : this.hash().trim().length > 0;
@@ -706,8 +783,8 @@ export class App implements OnInit, OnDestroy {
   protected readonly submitLabel = computed(() =>
     this.mode() === "pdf" ? "Firmar PDF" : "Firmar hash"
   );
-  protected readonly configLabel = computed(
-    () => this.config()?.purpose ?? "Cargando"
+  protected readonly selectedPurposeLabel = computed(
+    () => this.selectedMode()?.label ?? "Cargando"
   );
   protected readonly checksumLabel = computed(() => this.checksum() || "Pendiente");
   protected readonly isSigned = computed(() => this.status() === "signed");
@@ -749,6 +826,7 @@ export class App implements OnInit, OnDestroy {
         this.http.get<ConfigResponse>(`${API_BASE_URL}/config`)
       );
       this.config.set(config);
+      this.selectedPurpose.set(config.purpose);
     } catch {
       this.output.set("No se pudo leer la configuracion de Hono.");
     }
@@ -778,6 +856,16 @@ export class App implements OnInit, OnDestroy {
         this.sanitizer.bypassSecurityTrustResourceUrl(url)
       );
       this.status.set("idle");
+    }
+  }
+
+  protected selectPurpose(purpose: string): void {
+    this.selectedPurpose.set(purpose);
+    this.clearSignedPdf();
+    this.status.set("idle");
+
+    if (!this.requiresOtp()) {
+      this.otp.set("");
     }
   }
 
@@ -811,6 +899,7 @@ export class App implements OnInit, OnDestroy {
     return firstValueFrom(
       this.http.post<unknown>(SIGN_HASH_ENDPOINT, {
         hash: this.hash().trim(),
+        purpose: this.selectedPurpose(),
         ...(otp ? { otp } : {}),
       })
     );
@@ -825,6 +914,7 @@ export class App implements OnInit, OnDestroy {
 
     const form = new FormData();
     form.set("file", file);
+    form.set("purpose", this.selectedPurpose());
 
     const otp = this.otp().trim();
 
