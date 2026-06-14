@@ -4,6 +4,7 @@ import { FormsModule } from "@angular/forms";
 import { firstValueFrom } from "rxjs";
 
 const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
+const SIGN_PDF_ENDPOINT = "http://localhost:8787/sign/pdf";
 
 @Component({
   selector: "app-root",
@@ -22,6 +23,18 @@ const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
 
       <section class="workspace" aria-label="Formulario de firma hash">
         <form class="panel" (ngSubmit)="signHash()">
+          <div class="field-header">
+            <label for="pdf">PDF para firma directa</label>
+            <span>{{ fileLabel() }}</span>
+          </div>
+          <input
+            id="pdf"
+            name="pdf"
+            type="file"
+            accept="application/pdf"
+            (change)="selectFile($event)"
+          />
+
           <div class="field-header">
             <label for="hash">Hash SHA-256 base64</label>
             <span>{{ hashLength() }} caracteres</span>
@@ -54,9 +67,9 @@ const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
 
           <div class="actions">
             <button type="submit" [disabled]="loading() || !canSubmit()">
-              {{ loading() ? "Firmando..." : "Firmar hash" }}
+              {{ loading() ? "Firmando..." : submitLabel() }}
             </button>
-            <code>{{ endpoint }}</code>
+            <code>{{ activeEndpoint() }}</code>
           </div>
         </form>
 
@@ -233,6 +246,11 @@ const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
         font-size: 14px;
       }
 
+      input[type="file"] {
+        width: 100%;
+        font-family: inherit;
+      }
+
       @media (max-width: 820px) {
         .workspace {
           grid-template-columns: 1fr;
@@ -251,15 +269,27 @@ const SIGN_HASH_ENDPOINT = "http://localhost:8787/sign/hash";
   ],
 })
 export class App {
-  protected readonly endpoint = SIGN_HASH_ENDPOINT;
   protected readonly hash = signal("");
   protected readonly otp = signal("");
+  protected readonly file = signal<File | null>(null);
   protected readonly loading = signal(false);
   protected readonly status = signal("");
   protected readonly output = signal("Sin respuesta.");
 
   protected readonly hashLength = computed(() => this.hash().trim().length);
-  protected readonly canSubmit = computed(() => this.hashLength() > 0);
+  protected readonly hasFile = computed(() => this.file() !== null);
+  protected readonly canSubmit = computed(() => this.hasFile() || this.hashLength() > 0);
+  protected readonly activeEndpoint = computed(() =>
+    this.hasFile() ? SIGN_PDF_ENDPOINT : SIGN_HASH_ENDPOINT
+  );
+  protected readonly submitLabel = computed(() =>
+    this.hasFile() ? "Firmar PDF" : "Firmar hash"
+  );
+  protected readonly fileLabel = computed(() => {
+    const file = this.file();
+
+    return file ? `${file.name} (${file.size} bytes)` : "Opcional";
+  });
   protected readonly validationMessage = computed(() =>
     this.hash().length > 0 && this.hashLength() === 0
       ? "El hash no puede estar vacio."
@@ -268,10 +298,17 @@ export class App {
 
   private readonly http = inject(HttpClient);
 
+  protected selectFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.file.set(input.files?.item(0) ?? null);
+  }
+
   protected async signHash(): Promise<void> {
     const hash = this.hash().trim();
     const otp = this.otp().trim();
-    if (!hash) {
+    const file = this.file();
+
+    if (!file && !hash) {
       return;
     }
 
@@ -280,12 +317,14 @@ export class App {
     this.output.set("Esperando respuesta de la API Hono...");
 
     try {
-      const response = await firstValueFrom(
-        this.http.post<unknown>(SIGN_HASH_ENDPOINT, {
-          hash,
-          ...(otp ? { otp } : {}),
-        })
-      );
+      const response = file
+        ? await this.signPdf(file, otp)
+        : await firstValueFrom(
+            this.http.post<unknown>(SIGN_HASH_ENDPOINT, {
+              hash,
+              ...(otp ? { otp } : {}),
+            })
+          );
       this.status.set("HTTP 200");
       this.output.set(JSON.stringify(response, null, 2));
     } catch (error) {
@@ -294,6 +333,17 @@ export class App {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private signPdf(file: File, otp: string): Promise<unknown> {
+    const form = new FormData();
+    form.set("file", file);
+
+    if (otp) {
+      form.set("otp", otp);
+    }
+
+    return firstValueFrom(this.http.post<unknown>(SIGN_PDF_ENDPOINT, form));
   }
 }
 

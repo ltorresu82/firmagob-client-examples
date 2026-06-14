@@ -9,8 +9,8 @@ Este repositorio es un monorepo Turborepo con pnpm workspaces. No es oficial de 
 | Ejemplo | Descripcion |
 | --- | --- |
 | [`examples/node-cli`](examples/node-cli) | CLI minima para firmar un hash PDF con FirmaGob. |
-| [`examples/hono-api`](examples/hono-api) | API Hono con endpoint `POST /sign/hash`. |
-| [`examples/angular-upload`](examples/angular-upload) | App Angular con formulario simple que consume la API Hono local. |
+| [`examples/hono-api`](examples/hono-api) | API Hono con endpoints `POST /sign/hash` y `POST /sign/pdf`. |
+| [`examples/angular-upload`](examples/angular-upload) | App Angular con formulario simple para firmar hash o enviar un PDF pequeño a la API Hono local. |
 
 ## Variables requeridas
 
@@ -64,6 +64,14 @@ API Hono:
 ```bash
 pnpm dev:hono
 ```
+
+Enviar PDF directo a FirmaGob desde la API Hono:
+
+```bash
+curl -F "file=@documento.pdf;type=application/pdf" -F "otp=123456" http://localhost:8787/sign/pdf
+```
+
+La respuesta de `POST /sign/pdf` incluye el PDF firmado en `result.files[0].content` como base64. Sin propiedad `layout`, FirmaGob genera una firma digital invisible: el PDF se ve igual, pero lectores como Adobe Acrobat muestran la firma en el panel de firmas.
 
 Angular:
 
